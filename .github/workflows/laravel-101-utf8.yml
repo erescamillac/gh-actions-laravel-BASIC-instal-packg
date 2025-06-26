@@ -1,0 +1,69 @@
+name: Laravel CI
+
+on: [push]
+
+jobs:
+  laravel-test:
+    # Specific environment for the job
+    environment: development-env-eec
+    runs-on: ubuntu-latest
+
+    # Docker services
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: rootPwd#X44
+          MYSQL_DATABASE: laravel_test_db_101
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@2.34.1
+        with:
+          php-version: '8.2'
+          extensions: mbstring, bcmath, pdo, pdo_mysql
+
+      - name: Set App
+        run: cp .env.example .env
+
+      # Set up de database connection
+      - name: Set up database connection
+        run: |
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction
+
+      - name: Set App Key
+        run: php artisan key:generate
+
+      - name: Run test
+        id: run-test
+        run: vendor/bin/phpunit
+
+      - name: Upload test results (Artifact)
+        # Si occurió un error en alguno de los steps anteriores, este step se ejecutará 
+        # [Returns true when any previous step of a job fails]
+        # {https://docs.github.com/en/actions/reference/evaluate-expressions-in-workflows-and-actions#status-check-functions}
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: laravel-app101-test-results
+          # path: storage/logs/
+          path: config/
+
+
+      - name: Listar archivos
+      # Ejecución CONDICIONAL de este step
+        if: steps.run-test.outcome == 'success'
+        run: ls -al
