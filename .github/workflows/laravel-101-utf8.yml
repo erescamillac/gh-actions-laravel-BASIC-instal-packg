@@ -65,5 +65,6 @@ jobs:
 
       - name: Listar archivos
       # Ejecución CONDICIONAL de este step
+      # Comentario adicional de ejemplo
         if: steps.run-test.outcome == 'success'
         run: ls -al
